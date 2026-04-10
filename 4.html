@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dance Judge Pro - Pro Edition</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --secondary: #fb8c00;
+            --danger: #d32f2f;
+            --bg: #f0f2f5;
+            --star-gold: #ffc107;
+            --star-empty: #bdc3c7;
+        }
+
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: var(--bg); margin: 0; padding-bottom: 120px; font-size: 16px;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex; background: #fff; position: sticky; top: 0; z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tab { 
+            flex: 1; text-align: center; padding: 15px; font-weight: bold; 
+            color: #666; cursor: pointer; border-bottom: 3px solid transparent;
+        }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .content-section { display: none; padding: 15px; max-width: 1200px; margin: 0 auto; }
+        .content-section.active { display: block; }
+
+        /* Stage Config Row */
+        .config-row { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap; }
+        .config-group { display: flex; flex-direction: column; align-items: center; }
+        .config-group label { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #666; }
+
+        select { 
+            padding: 10px; font-size: 1rem; border-radius: 8px; border: 2px solid #ddd; background: white;
+        }
+
+        /* Stage Grid */
+        .pair-container { 
+            display: grid; 
+            gap: 15px; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+        }
+
+        .card { 
+            background: #fff; border-radius: 12px; padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 6px solid var(--primary);
+            position: relative;
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .id-label { font-size: 1.8rem; font-weight: 800; }
+        
+        .header-actions { display: flex; gap: 10px; }
+        .icon-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; border-radius: 50%; }
+        .icon-btn:hover { background: #eee; }
+        .skip-btn { color: var(--danger); font-weight: bold; font-family: sans-serif; }
+
+        /* Scoring */
+        .star-row { font-size: 1.8rem; cursor: pointer; margin: 5px 0; display: flex; gap: 3px; }
+        .star-row span { color: var(--star-empty); }
+        .star-row span.filled { color: var(--star-gold); }
+
+        .points-row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .pts-val { font-size: 1.6rem; font-weight: bold; width: 40px; text-align: center; }
+        .pts-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; flex-grow: 1; }
+        .btn-s { border: none; padding: 8px 2px; border-radius: 4px; font-weight: bold; cursor: pointer; background: #eee; font-size: 0.8rem; }
+        
+        textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; font-family: inherit; }
+
+        /* Lists */
+        .list-item { background: #fff; margin-bottom: 8px; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .star-small { color: var(--star-gold); letter-spacing: -2px; }
+
+        /* Overlay */
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 2000; align-items: center; justify-content: center; }
+        .overlay-content { width: 95%; max-width: 400px; }
+
+        /* Bottom Nav */
+        .bottom-nav { 
+            position: fixed; bottom: 0; width: 100%; background: #fff; 
+            padding: 15px 0; border-top: 1px solid #ddd; display: flex; justify-content: center; gap: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .nav-btn { padding: 15px 25px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; min-width: 140px; }
+    </style>
+</head>
+<body>
+
+<div class="tab-bar">
+    <div class="tab active" onclick="switchTab('stage')">STAGE</div>
+    <div class="tab" onclick="switchTab('points')">POINTS</div>
+    <div class="tab" onclick="switchTab('stars')">STARS</div>
+</div>
+
+<section id="stage" class="content-section active">
+    <div class="config-row">
+        <div class="config-group">
+            <label>Start ID</label>
+            <select id="mainSelect" onchange="resetStageToSelection()"></select>
+        </div>
+        <div class="config-group">
+            <label>On Stage</label>
+            <select id="stageSize" onchange="updateStage()">
+                <option value="1">1 Dancer</option>
+                <option value="2" selected>2 Dancers</option>
+                <option value="3">3 Dancers</option>
+                <option value="4">4 Dancers</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="stageDisplay" class="pair-container"></div>
+
+    <div class="bottom-nav">
+        <button class="nav-btn" style="background:#eee" onclick="navStage(-1)">Previous</button>
+        <button class="nav-btn" style="background:var(--primary); color:white" onclick="navStage(1)">Next Set</button>
+    </div>
+</section>
+
+<section id="points" class="content-section"></section>
+<section id="stars" class="content-section"></section>
+
+<div id="overlay" onclick="closeOverlay()">
+    <div class="overlay-content" id="overlayInner" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+    const dancers = [
+        {"ID": "T121", "SAFE_NAME": "Amir A", "SCHOOLNAME": "Grand Emerald", "COUNTRY": "Ukraine"},
+        {"ID": "T122", "SAFE_NAME": "Néab M", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T123", "SAFE_NAME": "Stel N", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T124", "SAFE_NAME": "Made B", "SCHOOLNAME": "Heart Of Ireland School", "COUNTRY": "USA"},
+        {"ID": "T125", "SAFE_NAME": "Oliv G", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T126", "SAFE_NAME": "Marl C", "SCHOOLNAME": "Claddagh School Of Irish Dance", "COUNTRY": "Australia/Northern Ireland"},
+        {"ID": "T127", "SAFE_NAME": "Ciar M", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T128", "SAFE_NAME": "Lia K", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T129", "SAFE_NAME": "Grac B", "SCHOOLNAME": "Toibreacha-Brennan Academy", "COUNTRY": "England"},
+        {"ID": "T130", "SAFE_NAME": "Ange S", "SCHOOLNAME": "Diekdanzers & Hnt", "COUNTRY": "Germany"},
+        {"ID": "T131", "SAFE_NAME": "Elis P", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T132", "SAFE_NAME": "Cinj G", "SCHOOLNAME": "Éirinn Irish Dance", "COUNTRY": "Switzerland"},
+        {"ID": "T133", "SAFE_NAME": "Nynk B", "SCHOOLNAME": "Taradance", "COUNTRY": "Belgium"},
+        {"ID": "T134", "SAFE_NAME": "Jil G", "SCHOOLNAME": "Scoil Rince O'Brannlaig", "COUNTRY": "Germany"},
+        {"ID": "T135", "SAFE_NAME": "Lizz B", "SCHOOLNAME": "McCarthy Felton School Of Irish Dancing", "COUNTRY": "England"},
+        {"ID": "T136", "SAFE_NAME": "Blái S", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T137", "SAFE_NAME": "Tali C", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"},
+        {"ID": "T138", "SAFE_NAME": "Madd F", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T139", "SAFE_NAME": "Joli N", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T140", "SAFE_NAME": "Addi H", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T141", "SAFE_NAME": "Dary B", "SCHOOLNAME": "Willdance", "COUNTRY": "Belarus"},
+        {"ID": "T142", "SAFE_NAME": "Mack M", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T143", "SAFE_NAME": "Bria F", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T144", "SAFE_NAME": "Nele B", "SCHOOLNAME": "Celtic Rainbow School Of Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T145", "SAFE_NAME": "Jame M", "SCHOOLNAME": "Celtic Clover Academy Of Irish Dance Brussels", "COUNTRY": "Belgium"},
+        {"ID": "T146", "SAFE_NAME": "Leil G", "SCHOOLNAME": "Stuart Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T147", "SAFE_NAME": "Clai M", "SCHOOLNAME": "Morrissey School Of Irish Dancing - Kildare", "COUNTRY": "Ireland"},
+        {"ID": "T148", "SAFE_NAME": "Pree M", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T149", "SAFE_NAME": "Boto S", "SCHOOLNAME": "Celtic Dream Irish Dance Group", "COUNTRY": "Hungary"},
+        {"ID": "T150", "SAFE_NAME": "Anas S", "SCHOOLNAME": "Dance Spirit Irish Dance School", "COUNTRY": "Belarus"},
+        {"ID": "T151", "SAFE_NAME": "Flor L", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T152", "SAFE_NAME": "Stel A", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T153", "SAFE_NAME": "Jess F", "SCHOOLNAME": "Murphy Gray Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T154", "SAFE_NAME": "Evel D", "SCHOOLNAME": "Bassdance", "COUNTRY": "Belarus"},
+        {"ID": "T155", "SAFE_NAME": "Anya R", "SCHOOLNAME": "Heart Of Ireland School", "COUNTRY": "USA"},
+        {"ID": "T156", "SAFE_NAME": "Alex M", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T157", "SAFE_NAME": "Zoe L", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T158", "SAFE_NAME": "Juli S", "SCHOOLNAME": "Celtic Grace School Of Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T159", "SAFE_NAME": "Laur M", "SCHOOLNAME": "Murphy Gray Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T160", "SAFE_NAME": "Iona G", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"},
+        {"ID": "T161", "SAFE_NAME": "Kirs M", "SCHOOLNAME": "Fallon Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T162", "SAFE_NAME": "Jess L", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"}
+    ];
+
+    // Current indices being shown on stage
+    let currentStageIndices = [0, 1];
+
+    const getS = (id) => JSON.parse(localStorage.getItem('d_'+id)) || { h:0, p:0, n:'' };
+    const setS = (id, obj) => localStorage.setItem('d_'+id, JSON.stringify(obj));
+
+    window.actH = (id, val) => { let s = getS(id); s.h = val; setS(id, s); refresh(); };
+    window.actP = (id, val) => { let s = getS(id); s.p += val; setS(id, s); refresh(); };
+    window.actN = (id, val) => { let s = getS(id); s.n = val; setS(id, s); };
+    window.actBin = (id) => { if(confirm('Clear data for '+id+'?')) { localStorage.removeItem('d_'+id); refresh(); closeOverlay(); } };
+
+    // SKIP function: removes specific index from display and pulls next available
+    window.skipDancer = (displaySlot) => {
+        let maxIdx = Math.max(...currentStageIndices);
+        let nextIdx = maxIdx + 1;
+        
+        if (nextIdx >= dancers.length) {
+            alert("No more dancers available to pull in.");
+            return;
+        }
+        currentStageIndices[displaySlot] = nextIdx;
+        updateStage();
+    };
+
+    function refresh() { 
+        updateStage(); 
+        if(document.getElementById('points').classList.contains('active')) renderPoints();
+        if(document.getElementById('stars').classList.contains('active')) renderStars();
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab, .content-section').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.tab[onclick*="${t}"]`).classList.add('active');
+        document.getElementById(t).classList.add('active');
+        if(t === 'points') renderPoints();
+        if(t === 'stars') renderStars();
+    }
+
+    // Initialize dropdown
+    const sel = document.getElementById('mainSelect');
+    dancers.forEach((d,i) => { let o = document.createElement('option'); o.value=i; o.text=d.ID; sel.add(o); });
+
+    function resetStageToSelection() {
+        const start = parseInt(sel.value);
+        const size = parseInt(document.getElementById('stageSize').value);
+        currentStageIndices = [];
+        for(let i=0; i<size; i++) {
+            if(start + i < dancers.length) currentStageIndices.push(start + i);
+        }
+        updateStage();
+    }
+
+    function updateStage() {
+        const container = document.getElementById('stageDisplay');
+        const size = parseInt(document.getElementById('stageSize').value);
+        
+        // Ensure array size matches selection
+        if(currentStageIndices.length !== size) {
+            let start = currentStageIndices[0] || 0;
+            currentStageIndices = [];
+            for(let i=0; i<size; i++) if(start+i < dancers.length) currentStageIndices.push(start+i);
+        }
+
+        let html = '';
+        currentStageIndices.forEach((idx, slot) => {
+            html += renderCard(dancers[idx], slot);
+        });
+        container.innerHTML = html;
+        // Sync the dropdown to the first dancer on stage
+        sel.value = currentStageIndices[0];
+    }
+
+    function renderCard(d, slot) {
+        if(!d) return '';
+        const s = getS(d.ID);
+        let starHtml = '';
+        for(let i=1; i<=5; i++) {
+            starHtml += `<span class="${i <= s.h ? 'filled' : ''}" onclick="actH('${d.ID}',${i})">${i <= s.h ? '★' : '☆'}</span>`;
+        }
+
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <span class="id-label">${d.ID}</span>
+                    <div class="header-actions">
+                        <button class="icon-btn skip-btn" title="Skip Dancer" onclick="skipDancer(${slot})">✕</button>
+                        <button class="icon-btn" title="Reset Data" onclick="actBin('${d.ID}')">🗑️</button>
+                    </div>
+                </div>
+                <div style="font-weight:bold">${d.SAFE_NAME}</div>
+                <div style="font-size:0.8rem; color:#666">${d.SCHOOLNAME}</div>
+                <div class="star-row">${starHtml}</div>
+                <div class="points-row">
+                    <div class="pts-val">${s.p}</div>
+                    <div class="pts-btns">
+                        <button class="btn-s" style="color:green" onclick="actP('${d.ID}',1)">+1</button>
+                        <button class="btn-s" style="color:green" onclick="actP('${d.ID}',3)">+3</button>
+                        <button class="btn-s" style="color:green" onclick="actP('${d.ID}',5)">+5</button>
+                        <button class="btn-s" style="color:red" onclick="actP('${d.ID}',-1)">-1</button>
+                    </div>
+                </div>
+                <textarea oninput="actN('${d.ID}',this.value)" placeholder="Notes...">${s.n}</textarea>
+            </div>`;
+    }
+
+    window.navStage = (direction) => {
+        const size = parseInt(document.getElementById('stageSize').value);
+        let step = size * direction;
+        let newStart = currentStageIndices[0] + step;
+
+        if (newStart < 0) newStart = 0;
+        if (newStart >= dancers.length) return;
+
+        currentStageIndices = [];
+        for(let i=0; i<size; i++) {
+            if(newStart + i < dancers.length) currentStageIndices.push(newStart + i);
+        }
+        updateStage();
+        window.scrollTo(0,0);
+    };
+
+    function renderPoints() {
+        const data = dancers.map(d => ({...d, ...getS(d.ID)})).filter(x => x.p !== 0 || x.h !== 0 || x.n !== "").sort((a,b) => b.p - a.p);
+        let h = `<h3>Points Ranking</h3>`;
+        data.forEach(d => h += listTemplate(d));
+        document.getElementById('points').innerHTML = h || `<p>No data recorded.</p>`;
+    }
+
+    function renderStars() {
+        const data = dancers.map(d => ({...d, ...getS(d.ID)})).filter(x => x.p !== 0 || x.h !== 0 || x.n !== "").sort((a,b) => b.h - a.h || b.p - a.p);
+        let h = `<h3>Stars Ranking</h3>`;
+        data.forEach(d => h += listTemplate(d));
+        document.getElementById('stars').innerHTML = h || `<p>No data recorded.</p>`;
+    }
+
+    function listTemplate(d) {
+        return `<div class="list-item" onclick="openEdit('${d.ID}')">
+            <div><h4>${d.ID} - ${d.SAFE_NAME}</h4><small>${d.SCHOOLNAME}</small></div>
+            <div style="text-align:right"><b>${d.p} pts</b><br><span class="star-small">${'★'.repeat(d.h)}${'☆'.repeat(5-d.h)}</span></div>
+        </div>`;
+    }
+
+    window.openEdit = (id) => {
+        const d = dancers.find(x => x.ID === id);
+        document.getElementById('overlayInner').innerHTML = renderCard(d, -1); // -1 slot for no skip
+        document.getElementById('overlay').style.display = 'flex';
+        // Hide skip button in overlay
+        document.querySelector('#overlayInner .skip-btn').style.display = 'none';
+    };
+    window.closeOverlay = () => { document.getElementById('overlay').style.display = 'none'; };
+
+    // Initial run
+    resetStageToSelection();
+</script>
+</body>
+</html>
