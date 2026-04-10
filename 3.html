@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dance Judge Pro</title>
+    <title>Dance Judge Pro - Star Edition</title>
     <style>
         :root {
             --primary: #2e7d32;
             --secondary: #fb8c00;
             --bg: #f0f2f5;
-            --heart-red: #d32f2f;
-            --heart-empty: #ccc;
+            --star-gold: #ffc107;
+            --star-empty: #bdc3c7;
         }
 
         body { 
@@ -45,37 +45,37 @@
 
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .id-label { font-size: 1.8rem; font-weight: 800; }
-        .bin-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.5; }
-        .bin-btn:hover { opacity: 1; }
+        .bin-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 0 5px; }
 
-        /* Scoring Components */
-        .heart-row { font-size: 1.8rem; cursor: pointer; margin: 10px 0; user-select: none; }
-        .heart-row span { color: var(--heart-empty); transition: color 0.2s; }
-        .heart-row span.filled { color: var(--heart-red); }
+        /* Star Rating - FIXED Visuals */
+        .star-row { font-size: 2.2rem; cursor: pointer; margin: 10px 0; user-select: none; display: flex; gap: 5px; }
+        .star-row span { color: var(--star-empty); transition: color 0.1s; }
+        .star-row span.filled { color: var(--star-gold); text-shadow: 0 0 2px rgba(0,0,0,0.2); }
 
         .points-row { display: flex; align-items: center; gap: 15px; margin: 15px 0; }
-        .pts-val { font-size: 1.8rem; font-weight: bold; width: 40px; text-align: center; }
+        .pts-val { font-size: 1.8rem; font-weight: bold; width: 45px; text-align: center; }
         .pts-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; flex-grow: 1; }
-        .btn { border: none; padding: 10px 5px; border-radius: 4px; font-weight: bold; cursor: pointer; background: #eee; }
-        .btn-plus { background: #e8f5e9; color: green; }
-        .btn-minus { background: #ffebee; color: red; }
+        .btn { border: none; padding: 12px 5px; border-radius: 6px; font-weight: bold; cursor: pointer; background: #eee; font-size: 0.9rem; }
+        .btn-plus { background: #e8f5e9; color: #1b5e20; }
+        .btn-minus { background: #ffebee; color: #b71c1c; }
 
-        textarea { width: 100%; min-height: 80px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; }
+        textarea { width: 100%; min-height: 100px; border: 1px solid #ddd; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 1rem; }
 
         /* List View */
         .list-item { 
             background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 8px;
             display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
-        .list-info h4 { margin: 0; }
+        .list-info h4 { margin: 0; font-size: 1.1rem; }
         .list-score { text-align: right; }
+        .star-small { color: var(--star-gold); letter-spacing: -2px; }
 
         /* Overlay */
         #overlay { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); display: none; z-index: 2000; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.85); display: none; z-index: 2000; align-items: center; justify-content: center;
         }
-        .overlay-content { width: 90%; max-width: 500px; position: relative; }
+        .overlay-content { width: 95%; max-width: 500px; position: relative; }
 
         /* Bottom Nav */
         .bottom-nav { 
@@ -88,23 +88,23 @@
 
 <div class="tab-bar">
     <div class="tab active" onclick="switchTab('stage')">STAGE</div>
-    <div class="tab" onclick="switchTab('points')">POINTS</div>
-    <div class="tab" onclick="switchTab('hearts')">HEARTS</div>
+    <div class="tab" onclick="switchTab('points')">BY POINTS</div>
+    <div class="tab" onclick="switchTab('stars')">BY STARS</div>
 </div>
 
 <section id="stage" class="content-section active">
     <select id="mainSelect" onchange="updateStage()"></select>
     <div id="stageDisplay" class="pair-container"></div>
     <div class="bottom-nav">
-        <button class="btn" style="width:120px" onclick="navStage(-1)">Prev</button>
-        <button class="btn btn-plus" style="width:120px; background:var(--primary); color:white" onclick="navStage(1)">Next</button>
+        <button class="btn" style="width:140px" onclick="navStage(-1)">Previous</button>
+        <button class="btn btn-plus" style="width:140px; background:var(--primary); color:white" onclick="navStage(1)">Next Dancer</button>
     </div>
 </section>
 
 <section id="points" class="content-section"></section>
-<section id="hearts" class="content-section"></section>
+<section id="stars" class="content-section"></section>
 
-<div id="overlay" onclick="closeOverlay(event)">
+<div id="overlay" onclick="closeOverlay()">
     <div class="overlay-content" id="overlayInner" onclick="event.stopPropagation()"></div>
 </div>
 
@@ -154,11 +154,9 @@
         {"ID": "T162", "SAFE_NAME": "Jess L", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"}
     ];
 
-    // LocalStorage Functions
     const getS = (id) => JSON.parse(localStorage.getItem('d_'+id)) || { h:0, p:0, n:'' };
     const setS = (id, obj) => localStorage.setItem('d_'+id, JSON.stringify(obj));
 
-    // Global Actions
     window.actH = (id, val) => { let s = getS(id); s.h = val; setS(id, s); refresh(); };
     window.actP = (id, val) => { let s = getS(id); s.p += val; setS(id, s); refresh(); };
     window.actN = (id, val) => { let s = getS(id); s.n = val; setS(id, s); };
@@ -167,27 +165,33 @@
     function refresh() { 
         updateStage(); 
         if(document.getElementById('points').classList.contains('active')) renderPoints();
-        if(document.getElementById('hearts').classList.contains('active')) renderHearts();
+        if(document.getElementById('stars').classList.contains('active')) renderStars();
+        if(document.getElementById('overlay').style.display === 'flex') {
+            const overlayID = document.querySelector('#overlayInner .id-label').innerText;
+            const d = dancers.find(x => x.ID === overlayID);
+            document.getElementById('overlayInner').innerHTML = renderCard(d, 1);
+        }
     }
 
-    // Tabs
     function switchTab(t) {
         document.querySelectorAll('.tab, .content-section').forEach(el => el.classList.remove('active'));
         document.querySelector(`.tab[onclick*="${t}"]`).classList.add('active');
         document.getElementById(t).classList.add('active');
         if(t === 'points') renderPoints();
-        if(t === 'hearts') renderHearts();
+        if(t === 'stars') renderStars();
     }
 
-    // Stage View
     const sel = document.getElementById('mainSelect');
     dancers.forEach((d,i) => { let o = document.createElement('option'); o.value=i; o.text=d.ID; sel.add(o); });
 
     function renderCard(d, num) {
         if(!d) return `<div class="card"><h3>End of List</h3></div>`;
         const s = getS(d.ID);
-        let hHtml = '';
-        for(let i=1; i<=5; i++) hHtml += `<span class="${i <= s.h ? 'filled' : ''}" onclick="actH('${d.ID}',${i})">❤</span>`;
+        let starHtml = '';
+        for(let i=1; i<=5; i++) {
+            const isFilled = i <= s.h;
+            starHtml += `<span class="${isFilled ? 'filled' : ''}" onclick="actH('${d.ID}',${i})">${isFilled ? '★' : '☆'}</span>`;
+        }
 
         return `
             <div class="card dancer-${num}">
@@ -195,9 +199,9 @@
                     <span class="id-label">${d.ID}</span>
                     <button class="bin-btn" onclick="actBin('${d.ID}')">🗑️</button>
                 </div>
-                <div style="font-weight:bold">${d.SAFE_NAME}</div>
-                <div style="font-size:0.8rem; color:#666">${d.SCHOOLNAME}</div>
-                <div class="heart-row">${hHtml}</div>
+                <div style="font-weight:bold; font-size:1.1rem;">${d.SAFE_NAME}</div>
+                <div style="font-size:0.85rem; color:#666">${d.SCHOOLNAME}</div>
+                <div class="star-row">${starHtml}</div>
                 <div class="points-row">
                     <div class="pts-val">${s.p}</div>
                     <div class="pts-btns">
@@ -207,7 +211,7 @@
                         <button class="btn btn-minus" onclick="actP('${d.ID}',-1)">-1</button>
                     </div>
                 </div>
-                <textarea oninput="actN('${d.ID}',this.value)" placeholder="Comments...">${s.n}</textarea>
+                <textarea oninput="actN('${d.ID}',this.value)" placeholder="Judging notes...">${s.n}</textarea>
             </div>`;
     }
 
@@ -218,35 +222,33 @@
 
     window.navStage = (v) => { let next = parseInt(sel.value)+v; if(next >=0 && next < dancers.length) { sel.value=next; updateStage(); } };
 
-    // List Views
     function renderPoints() {
         const data = dancers.map(d => ({...d, ...getS(d.ID)})).filter(x => x.p !== 0 || x.h !== 0 || x.n !== "").sort((a,b) => b.p - a.p);
-        let h = `<h3>Ranked by Points</h3>`;
+        let h = `<h3 style="margin-left:10px">Sorted by Points</h3>`;
         data.forEach(d => h += listTemplate(d));
-        document.getElementById('points').innerHTML = h || "No data saved yet.";
+        document.getElementById('points').innerHTML = h || `<p style="padding:20px">No notes recorded yet.</p>`;
     }
 
-    function renderHearts() {
+    function renderStars() {
         const data = dancers.map(d => ({...d, ...getS(d.ID)})).filter(x => x.p !== 0 || x.h !== 0 || x.n !== "").sort((a,b) => b.h - a.h || b.p - a.p);
-        let h = `<h3>Ranked by Hearts</h3>`;
+        let h = `<h3 style="margin-left:10px">Sorted by Stars</h3>`;
         data.forEach(d => h += listTemplate(d));
-        document.getElementById('hearts').innerHTML = h || "No data saved yet.";
+        document.getElementById('stars').innerHTML = h || `<p style="padding:20px">No stars awarded yet.</p>`;
     }
 
     function listTemplate(d) {
         return `<div class="list-item" onclick="openEdit('${d.ID}')">
             <div class="list-info"><h4>${d.ID} - ${d.SAFE_NAME}</h4><small>${d.SCHOOLNAME}</small></div>
-            <div class="list-score"><b>${d.p} pts</b><br><span style="color:var(--heart-red)">${'❤'.repeat(d.h)}</span></div>
+            <div class="list-score"><b>${d.p} pts</b><br><span class="star-small">${'★'.repeat(d.h)}${'☆'.repeat(5-d.h)}</span></div>
         </div>`;
     }
 
-    // Overlay
     window.openEdit = (id) => {
         const d = dancers.find(x => x.ID === id);
         document.getElementById('overlayInner').innerHTML = renderCard(d, 1);
         document.getElementById('overlay').style.display = 'flex';
     };
-    window.closeOverlay = (e) => { document.getElementById('overlay').style.display = 'none'; };
+    window.closeOverlay = () => { document.getElementById('overlay').style.display = 'none'; };
 
     updateStage();
 </script>
