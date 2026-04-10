@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irish Dance Adjudication Dashboard</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --secondary: #fb8c00;
+            --bg: #f0f2f5;
+            --heart: #e91e63;
+        }
+
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); 
+            margin: 0; padding: 10px; padding-bottom: 100px;
+            font-size: 18px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        .header { text-align: center; color: var(--primary); margin-bottom: 15px; }
+        .header h1 { font-size: 1.4rem; margin: 5px 0; }
+
+        select { 
+            padding: 12px; width: 100%; max-width: 400px; font-size: 1rem; 
+            border-radius: 8px; border: 2px solid #ddd; display: block; margin: 0 auto 20px;
+        }
+
+        .pair-container { display: flex; flex-direction: column; gap: 15px; }
+        @media (min-width: 768px) { .pair-container { flex-direction: row; } }
+
+        .card { 
+            flex: 1; border: 2px solid #eee; padding: 15px; border-radius: 12px; 
+            background: #fff; display: flex; flex-direction: column;
+        }
+        .dancer-1 { border-top: 8px solid var(--primary); }
+        .dancer-2 { border-top: 8px solid var(--secondary); }
+
+        .id-label { font-weight: 800; font-size: 2rem; color: #111; margin-bottom: 5px; }
+        .school-txt { font-size: 0.9rem; color: #666; margin-bottom: 15px; font-style: italic; }
+
+        /* Scoring Tools */
+        .scoring-section { background: #f9f9f9; padding: 12px; border-radius: 8px; margin-top: 10px; }
+        
+        /* Heart Rating */
+        .hearts { color: #ccc; font-size: 1.5rem; cursor: pointer; user-select: none; margin-bottom: 10px; }
+        .hearts .active { color: var(--heart); }
+
+        /* Points System */
+        .points-box { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .points-display { font-size: 1.8rem; font-weight: bold; min-width: 50px; text-align: center; }
+        .btn-group { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; width: 100%; }
+        .pt-btn { 
+            padding: 8px 0; border: none; border-radius: 4px; font-weight: bold; 
+            cursor: pointer; font-size: 0.9rem; background: #eee;
+        }
+        .pt-btn.plus { background: #e8f5e9; color: var(--primary); }
+        .pt-btn.minus { background: #ffebee; color: #c62828; }
+
+        /* Comments */
+        textarea { 
+            width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; 
+            padding: 10px; font-size: 1rem; resize: vertical; min-height: 80px;
+        }
+
+        /* Nav Bar */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; background: white;
+            padding: 15px 0; display: flex; justify-content: center; gap: 15px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.1); z-index: 1000;
+        }
+        .nav-btn {
+            padding: 15px 25px; font-size: 1.1rem; font-weight: bold; border-radius: 30px;
+            border: none; cursor: pointer; min-width: 130px;
+        }
+        .prev-btn { background: #eee; color: #444; }
+        .next-btn { background: var(--primary); color: white; }
+        .nav-btn:disabled { opacity: 0.3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header"><h1>Stage Pair View</h1></div>
+    <select id="dancerSelect" onchange="updateView()"></select>
+    <div id="pairDisplay" class="pair-container"></div>
+</div>
+
+<div class="nav-bar">
+    <button id="prevBtn" class="nav-btn prev-btn" onclick="nav(-2)">Previous Pair</button>
+    <button id="nextBtn" class="nav-btn next-btn" onclick="nav(2)">Next Pair</button>
+</div>
+
+<script>
+    const dancers = [
+        {"ID": "T121", "SAFE_NAME": "Amir A", "SCHOOLNAME": "Grand Emerald", "COUNTRY": "Ukraine"},
+        {"ID": "T122", "SAFE_NAME": "Néab M", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T123", "SAFE_NAME": "Stel N", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T124", "SAFE_NAME": "Made B", "SCHOOLNAME": "Heart Of Ireland School", "COUNTRY": "USA"},
+        {"ID": "T125", "SAFE_NAME": "Oliv G", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T126", "SAFE_NAME": "Marl C", "SCHOOLNAME": "Claddagh School Of Irish Dance", "COUNTRY": "Australia/Northern Ireland"},
+        {"ID": "T127", "SAFE_NAME": "Ciar M", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T128", "SAFE_NAME": "Lia K", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T129", "SAFE_NAME": "Grac B", "SCHOOLNAME": "Toibreacha-Brennan Academy", "COUNTRY": "England"},
+        {"ID": "T130", "SAFE_NAME": "Ange S", "SCHOOLNAME": "Diekdanzers & Hnt", "COUNTRY": "Germany"},
+        {"ID": "T131", "SAFE_NAME": "Elis P", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T132", "SAFE_NAME": "Cinj G", "SCHOOLNAME": "Éirinn Irish Dance", "COUNTRY": "Switzerland"},
+        {"ID": "T133", "SAFE_NAME": "Nynk B", "SCHOOLNAME": "Taradance", "COUNTRY": "Belgium"},
+        {"ID": "T134", "SAFE_NAME": "Jil G", "SCHOOLNAME": "Scoil Rince O'Brannlaig", "COUNTRY": "Germany"},
+        {"ID": "T135", "SAFE_NAME": "Lizz B", "SCHOOLNAME": "McCarthy Felton School Of Irish Dancing", "COUNTRY": "England"},
+        {"ID": "T136", "SAFE_NAME": "Blái S", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T137", "SAFE_NAME": "Tali C", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"},
+        {"ID": "T138", "SAFE_NAME": "Madd F", "SCHOOLNAME": "Aine Hay Academy", "Scotland": "Scotland"},
+        {"ID": "T139", "SAFE_NAME": "Joli N", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T140", "SAFE_NAME": "Addi H", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T141", "SAFE_NAME": "Dary B", "SCHOOLNAME": "Willdance", "COUNTRY": "Belarus"},
+        {"ID": "T142", "SAFE_NAME": "Mack M", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T143", "SAFE_NAME": "Bria F", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T144", "SAFE_NAME": "Nele B", "SCHOOLNAME": "Celtic Rainbow School Of Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T145", "SAFE_NAME": "Jame M", "SCHOOLNAME": "Celtic Clover Academy Of Irish Dance Brussels", "COUNTRY": "Belgium"},
+        {"ID": "T146", "SAFE_NAME": "Leil G", "SCHOOLNAME": "Stuart Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T147", "SAFE_NAME": "Clai M", "SCHOOLNAME": "Morrissey School Of Irish Dancing - Kildare", "COUNTRY": "Ireland"},
+        {"ID": "T148", "SAFE_NAME": "Pree M", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T149", "SAFE_NAME": "Boto S", "SCHOOLNAME": "Celtic Dream Irish Dance Group", "COUNTRY": "Hungary"},
+        {"ID": "T150", "SAFE_NAME": "Anas S", "SCHOOLNAME": "Dance Spirit Irish Dance School", "COUNTRY": "Belarus"},
+        {"ID": "T151", "SAFE_NAME": "Flor L", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T152", "SAFE_NAME": "Stel A", "SCHOOLNAME": "Miller Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T153", "SAFE_NAME": "Jess F", "SCHOOLNAME": "Murphy Gray Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T154", "SAFE_NAME": "Evel D", "SCHOOLNAME": "Bassdance", "COUNTRY": "Belarus"},
+        {"ID": "T155", "SAFE_NAME": "Anya R", "SCHOOLNAME": "Heart Of Ireland School", "COUNTRY": "USA"},
+        {"ID": "T156", "SAFE_NAME": "Alex M", "SCHOOLNAME": "The Arc Of Irish Dance E.v", "COUNTRY": "Germany"},
+        {"ID": "T157", "SAFE_NAME": "Zoe L", "SCHOOLNAME": "Aine Hay Academy", "COUNTRY": "Scotland"},
+        {"ID": "T158", "SAFE_NAME": "Juli S", "SCHOOLNAME": "Celtic Grace School Of Irish Dance", "COUNTRY": "Germany"},
+        {"ID": "T159", "SAFE_NAME": "Laur M", "SCHOOLNAME": "Murphy Gray Academy Of Irish Dance", "COUNTRY": "Ireland"},
+        {"ID": "T160", "SAFE_NAME": "Iona G", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"},
+        {"ID": "T161", "SAFE_NAME": "Kirs M", "SCHOOLNAME": "Fallon Academy Of Irish Dance", "COUNTRY": "Scotland"},
+        {"ID": "T162", "SAFE_NAME": "Jess L", "SCHOOLNAME": "Echoes Of Erin", "COUNTRY": "Hong Kong & Northern Ireland"}
+    ];
+
+    const select = document.getElementById('dancerSelect');
+    
+    // Init select with pairs
+    for(let i=0; i<dancers.length; i+=2) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        let d1 = dancers[i].ID;
+        let d2 = dancers[i+1] ? dancers[i+1].ID : "End";
+        opt.textContent = `Pair: ${d1} & ${d2}`;
+        select.appendChild(opt);
+    }
+
+    // Local Storage Helpers
+    function getStore(id) {
+        return JSON.parse(localStorage.getItem('dancer_'+id)) || { hearts: 0, points: 0, note: "" };
+    }
+    function saveStore(id, data) {
+        localStorage.setItem('dancer_'+id, JSON.stringify(data));
+    }
+
+    window.updateHeart = function(id, rating) {
+        let data = getStore(id);
+        data.hearts = rating;
+        saveStore(id, data);
+        updateView();
+    };
+
+    window.adjustPoints = function(id, val) {
+        let data = getStore(id);
+        data.points += val;
+        saveStore(id, data);
+        updateView();
+    };
+
+    window.updateNote = function(id, text) {
+        let data = getStore(id);
+        data.note = text;
+        saveStore(id, data);
+    };
+
+    function renderDancer(d, num) {
+        if(!d) return `<div class="card"><h3>Dancer ${num}</h3><p>Empty</p></div>`;
+        const state = getStore(d.ID);
+        
+        let heartHtml = '';
+        for(let i=1; i<=5; i++) {
+            heartHtml += `<span class="${i <= state.hearts ? 'active' : ''}" onclick="updateHeart('${d.ID}', ${i})">❤</span>`;
+        }
+
+        return `
+            <div class="card dancer-${num}">
+                <div style="font-size:0.7rem; color:#888; text-transform:uppercase;">Dancer ${num}</div>
+                <div class="id-label">${d.ID}</div>
+                <div style="font-weight:600">${d.SAFE_NAME}</div>
+                <div class="school-txt">${d.SCHOOLNAME}</div>
+
+                <div class="scoring-section">
+                    <div class="hearts">${heartHtml}</div>
+                    
+                    <div class="points-box">
+                        <div class="points-display">${state.points}</div>
+                        <div class="btn-group">
+                            <button class="pt-btn plus" onclick="adjustPoints('${d.ID}', 1)">+1</button>
+                            <button class="pt-btn plus" onclick="adjustPoints('${d.ID}', 3)">+3</button>
+                            <button class="pt-btn plus" onclick="adjustPoints('${d.ID}', 5)">+5</button>
+                            <button class="pt-btn minus" onclick="adjustPoints('${d.ID}', -1)">-1</button>
+                        </div>
+                    </div>
+
+                    <div class="label">Comments</div>
+                    <textarea oninput="updateNote('${d.ID}', this.value)" placeholder="Enter notes...">${state.note}</textarea>
+                </div>
+            </div>`;
+    }
+
+    window.updateView = function() {
+        const idx = parseInt(select.value);
+        const container = document.getElementById('pairDisplay');
+        container.innerHTML = renderDancer(dancers[idx], 1) + renderDancer(dancers[idx+1], 2);
+        
+        document.getElementById('prevBtn').disabled = (idx === 0);
+        document.getElementById('nextBtn').disabled = (idx >= dancers.length - 2);
+    };
+
+    window.nav = function(step) {
+        let target = (parseInt(select.value) || 0) + step;
+        if(target >= 0 && target < dancers.length) {
+            select.value = target;
+            updateView();
+            window.scrollTo(0,0);
+        }
+    };
+
+    // Initial load
+    updateView();
+</script>
+</body>
+</html>
