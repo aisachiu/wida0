@@ -2,22 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Safe Irish Dance Viewer</title>
+    <title>Safe Irish Dance Viewer - Peer View</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .header { text-align: center; border-bottom: 2px solid #2e7d32; margin-bottom: 20px; padding-bottom: 10px; }
         .selector-box { text-align: center; margin-bottom: 30px; }
         select { padding: 10px; width: 320px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer; }
         .pair-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-        .card { flex: 1; min-width: 280px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #fafafa; transition: all 0.3s ease; }
-        .card h3 { margin-top: 0; color: #2e7d32; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
-        .id-label { font-weight: bold; font-size: 1.5em; color: #222; margin-bottom: 15px; display: block; }
-        .info-row { margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        .card { flex: 1; min-width: 300px; border: 1px solid #ddd; padding: 20px; border-radius: 8px; background: #fafafa; position: relative; }
+        .id-label { font-weight: bold; font-size: 1.5em; color: #222; margin-bottom: 10px; display: block; }
+        .info-row { margin-bottom: 8px; }
         .label { font-size: 0.7em; color: #888; text-transform: uppercase; display: block; font-weight: bold; }
-        .value { font-weight: 500; font-size: 1.05em; color: #333; }
+        .value { font-weight: 500; color: #333; }
         .selected-card { border-left: 6px solid #2e7d32; background: #f9fff9; }
         .next-card { border-left: 6px solid #fb8c00; background: #fffaf5; }
+        
+        /* Peer List Styles */
+        .peer-section { margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc; }
+        .peer-title { font-size: 0.75em; font-weight: bold; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+        .peer-list { display: flex; flex-wrap: wrap; gap: 5px; }
+        .peer-link { 
+            background: #eee; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.85em; 
+            color: #2e7d32; 
+            text-decoration: none; 
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .peer-link:hover { background: #2e7d32; color: white; border-color: #2e7d32; }
     </style>
 </head>
 <body>
@@ -36,7 +51,6 @@
 </div>
 
 <script>
-    // Data updated with "T" prefix and Safe Names
     const dancers = [
         {"ID": "T121", "SAFE_NAME": "Amir A", "SCHOOLNAME": "Grand Emerald", "COUNTRY": "Ukraine"},
         {"ID": "T122", "SAFE_NAME": "Néab M", "SCHOOLNAME": "The Emerald Lakes Academy Of Irish Dance", "COUNTRY": "Ireland"},
@@ -83,6 +97,8 @@
     ];
 
     const select = document.getElementById('dancerSelect');
+    
+    // Initialize Select
     dancers.forEach((d, i) => {
         let opt = document.createElement('option');
         opt.value = i;
@@ -90,19 +106,47 @@
         select.appendChild(opt);
     });
 
+    // Function to load a specific index (used by peer links)
+    window.loadByIndex = function(index) {
+        select.value = index;
+        showPair();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function getPeersHTML(currentDancerID, schoolName) {
+        const peers = dancers
+            .map((d, index) => ({...d, originalIndex: index}))
+            .filter(d => d.SCHOOLNAME === schoolName && d.ID !== currentDancerID);
+
+        if (peers.length === 0) return `<div class="peer-list"><span style="font-size:0.8em; color:#999;">No other peers found.</span></div>`;
+
+        let html = '<div class="peer-list">';
+        peers.forEach(p => {
+            html += `<a class="peer-link" onclick="loadByIndex(${p.originalIndex})">${p.ID} (${p.SAFE_NAME})</a>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
     function renderCard(d, type) {
-        if(!d) return `<div class="card next-card"><h3>Next up</h3><p>End of starting list.</p></div>`;
+        if(!d) return `<div class="card next-card"><h3>Next</h3><p>End of list</p></div>`;
+        
         return `
             <div class="card ${type === 'Current' ? 'selected-card' : 'next-card'}">
-                <h3>${type} Competitor</h3>
+                <h3>${type}</h3>
                 <span class="id-label">${d.ID}</span>
                 <div class="info-row"><span class="label">Name</span><span class="value">${d.SAFE_NAME}</span></div>
                 <div class="info-row"><span class="label">School</span><span class="value">${d.SCHOOLNAME}</span></div>
                 <div class="info-row"><span class="label">Country</span><span class="value">${d.COUNTRY}</span></div>
+                
+                <div class="peer-section">
+                    <div class="peer-title">Peers from ${d.SCHOOLNAME}:</div>
+                    ${getPeersHTML(d.ID, d.SCHOOLNAME)}
+                </div>
             </div>`;
     }
 
-    function showPair() {
+    window.showPair = function() {
         const idx = parseInt(select.value);
         const container = document.getElementById('pairDisplay');
         if (isNaN(idx)) { container.innerHTML = ''; return; }
