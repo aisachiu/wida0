@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Judge Master Pro 2026</title>
+    <title>Dancer Tracker</title>
     <style>
         :root { 
             --primary: #2e7d32; --secondary: #fb8c00; --danger: #d32f2f; 
@@ -42,13 +42,28 @@
         .star-row .filled { color: var(--star-gold); }
         
         .pts-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
-        .pts-val { font-size: 1.8rem; font-weight: bold; width: 50px; text-align: center; }
-        .pts-btn { flex: 1; padding: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; background: #eee; }
+        .pts-val { font-size: 1.8rem; font-weight: bold; width: 60px; text-align: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .pts-btn { width: 60px; min-width: 60px; padding: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; background: #eee; touch-action: manipulation; }
+        .pts-btn-pos { background: #c8e6c9; }
+        .pts-btn-neg { background: #ffcdd2; }
 
         textarea { width: 100%; min-height: 90px; border-radius: 8px; border: 1px solid #ddd; padding: 10px; box-sizing: border-box; font-size: 1rem; }
 
+        /* Peers Section */
+        .peers-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+        .peers-title { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 8px; }
+        .peers-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .peer-btn { background: #f0f0f0; padding: 6px 12px; border: 1px solid #ddd; border-radius: 15px; font-size: 0.85rem; cursor: pointer; color: var(--primary); font-weight: 500; touch-action: manipulation; }
+        .peer-btn:active { background: #e0e0e0; }
+
         /* List Items */
         .list-item { background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .list-item.clickable { cursor: pointer; }
+
+        /* Edit Modal */
+        #editOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 2500; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box; }
+        #editInner { width: 100%; max-width: 560px; }
+        #editInner .card { margin: 0; }
 
         /* Modal */
         #jsonModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 3000; color: white; padding: 20px; box-sizing: border-box; }
@@ -84,6 +99,7 @@
     <div class="tab active" onclick="switchTab('stage')">STAGE</div>
     <div class="tab" onclick="switchTab('points')">BY POINTS</div>
     <div class="tab" onclick="switchTab('stars')">BY STARS</div>
+    <div class="tab" onclick="switchTab('schools')">SCHOOLS</div>
 </div>
 
 <section id="stage" class="content-section active">
@@ -107,6 +123,11 @@
 
 <section id="points" class="content-section"></section>
 <section id="stars" class="content-section"></section>
+<section id="schools" class="content-section"></section>
+
+<div id="editOverlay" onclick="closeEditModal()">
+    <div id="editInner" onclick="event.stopPropagation()"></div>
+</div>
 
 <div id="jsonModal">
     <h2>Dancer Set Manager</h2>
@@ -122,15 +143,16 @@
     </div>
 </div>
 
-<div class="bottom-nav">
-    <button class="nav-btn" style="background:#eee" onclick="navStage(-1)">Previous Pair</button>
-    <button class="nav-btn" style="background:var(--primary); color:white" onclick="navStage(1)">Next Pair</button>
+<div id="bottomNav" class="bottom-nav">
+    <button class="nav-btn" style="background:#eee" onclick="navStage(-1)">Previous</button>
+    <button class="nav-btn" style="background:var(--primary); color:white" onclick="navStage(1)">Next</button>
 </div>
 
 <script>
     // Initial State
     let currentCompName = "";
     let stageIndices = [0, 1];
+    let editingDancerId = "";
 
     // --- DATA FETCHING & STORAGE ---
     const getLibrary = () => JSON.parse(localStorage.getItem('dancerLibrary')) || {};
@@ -193,9 +215,29 @@
     }
 
     // --- UI ACTIONS ---
-    function updateH(id, val) { let s = getScore(currentCompName, id); s.h = val; setScore(currentCompName, id, s); renderStage(); }
-    function updateP(id, val) { let s = getScore(currentCompName, id); s.p += val; setScore(currentCompName, id, s); renderStage(); }
-    function updateN(id, val) { let s = getScore(currentCompName, id); s.n = val; setScore(currentCompName, id, s); }
+    function refreshActiveTabs() {
+        const activeTab = document.querySelector('.tab.active');
+        if (!activeTab) return;
+        const tabCall = activeTab.getAttribute('onclick') || '';
+        if (tabCall.includes("points")) renderRanking('points');
+        if (tabCall.includes("stars")) renderRanking('stars');
+        if (tabCall.includes("schools")) renderSchools();
+    }
+
+    function refreshEditingCard() {
+        if (!editingDancerId) return;
+        const comp = getComps().find(c => c.name === currentCompName);
+        if (!comp) return;
+        const dancers = getLibrary()[comp.setId] || [];
+        const dancer = dancers.find(d => d.ID === editingDancerId);
+        if (!dancer) return;
+        document.getElementById('editInner').innerHTML = renderCard(dancer, -1, true, 'edit');
+    }
+
+    function updateH(id, val) { let s = getScore(currentCompName, id); s.h = val; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
+    function updateP(id, val) { let s = getScore(currentCompName, id); s.p += val; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
+    function setP(id, val) { let s = getScore(currentCompName, id); s.p = parseInt(val) || 0; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
+    function updateN(id, val) { let s = getScore(currentCompName, id); s.n = val; setScore(currentCompName, id, s); refreshActiveTabs(); refreshEditingCard(); }
 
     function skip(slot) {
         let max = Math.max(...stageIndices);
@@ -217,16 +259,73 @@
         renderStage();
     }
 
+    function getDancerIndex(id) {
+        const comp = getComps().find(c => c.name === currentCompName);
+        const dancers = getLibrary()[comp.setId] || [];
+        return dancers.findIndex(d => d.ID === id);
+    }
+
+    function jumpToDancerId(id) {
+        const index = getDancerIndex(id);
+        if (index >= 0) {
+            const size = parseInt(document.getElementById('stageSize').value);
+            stageIndices = [];
+            for(let i=0; i<size; i++) stageIndices.push(index + i);
+            renderStage();
+        }
+    }
+
+    function handlePeerClick(id, mode = 'stage') {
+        if (mode === 'edit') {
+            openEditModal(id);
+            return;
+        }
+        jumpToDancerId(id);
+    }
+
+    function getPeersHTML(dancer, mode = 'stage') {
+        const comp = getComps().find(c => c.name === currentCompName);
+        const dancers = getLibrary()[comp.setId] || [];
+        const peers = dancers.filter(d => d.SCHOOLNAME === dancer.SCHOOLNAME && d.ID !== dancer.ID);
+        
+        if (peers.length === 0) return `<div style="font-size:0.8rem; color:#999;">Only one from this school.</div>`;
+        
+        let html = '<div class="peers-list">';
+        peers.forEach(p => {
+            html += `<button class="peer-btn" onclick="handlePeerClick('${p.ID}','${mode}')">${p.ID}</button>`;
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function openEditModal(id) {
+        const comp = getComps().find(c => c.name === currentCompName);
+        if (!comp) return;
+        const dancers = getLibrary()[comp.setId] || [];
+        const dancer = dancers.find(d => d.ID === id);
+        if (!dancer) return;
+        editingDancerId = id;
+        document.getElementById('editInner').innerHTML = renderCard(dancer, -1, true, 'edit');
+        document.getElementById('editOverlay').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        editingDancerId = "";
+        document.getElementById('editOverlay').style.display = 'none';
+    }
+
     function switchTab(t) {
         document.querySelectorAll('.tab, .content-section').forEach(el => el.classList.remove('active'));
         document.querySelector(`.tab[onclick*='${t}']`).classList.add('active');
         document.getElementById(t).classList.add('active');
+        document.getElementById('bottomNav').style.display = t === 'stage' ? 'flex' : 'none';
         if(t === 'points') renderRanking('points');
         if(t === 'stars') renderRanking('stars');
+        if(t === 'schools') renderSchools();
     }
 
     // --- RENDERERS ---
-    function renderCard(d, slot) {
+    function renderCard(d, slot, hideSkip = false, peerMode = 'stage') {
         if(!d) return `<div class="card"><h3>End of List</h3></div>`;
         const s = getScore(currentCompName, d.ID);
         let starHtml = '';
@@ -236,19 +335,23 @@
             <div class="card">
                 <div class="card-header">
                     <span class="id-badge">${d.ID}</span>
-                    <button class="skip-btn" onclick="skip(${slot})">✕</button>
+                    ${hideSkip ? '' : `<button class="skip-btn" onclick="skip(${slot})">✕</button>`}
                 </div>
                 <div style="font-weight:bold">${d.SAFE_NAME}</div>
                 <div style="font-size:0.8rem; color:#666">${d.SCHOOLNAME}</div>
                 <div class="star-row">${starHtml}</div>
                 <div class="pts-row">
-                    <div class="pts-val">${s.p}</div>
-                    <button class="pts-btn" onclick="updateP('${d.ID}',1)">+1</button>
-                    <button class="pts-btn" onclick="updateP('${d.ID}',5)">+5</button>
-                    <button class="pts-btn" onclick="updateP('${d.ID}',-1)">-1</button>
+                    <input type="number" class="pts-val" value="${s.p}" onchange="setP('${d.ID}', this.value)">
+                    <button class="pts-btn pts-btn-pos" onclick="updateP('${d.ID}',1)">+1</button>
+                    <button class="pts-btn pts-btn-pos" onclick="updateP('${d.ID}',5)">+5</button>
+                    <button class="pts-btn pts-btn-neg" onclick="updateP('${d.ID}',-1)">-1</button>
                     <button class="pts-btn" onclick="updateH('${d.ID}',0);updateP('${d.ID}',-s.p);renderStage();">🗑️</button>
                 </div>
                 <textarea oninput="updateN('${d.ID}',this.value)" placeholder="Judging notes...">${s.n}</textarea>
+                <div class="peers-section">
+                    <div class="peers-title">Schoolmates:</div>
+                    ${getPeersHTML(d, peerMode)}
+                </div>
             </div>`;
     }
 
@@ -272,6 +375,7 @@
 
     function renderRanking(type) {
         const comp = getComps().find(c => c.name === currentCompName);
+        if(!comp) return;
         const dancers = getLibrary()[comp.setId] || [];
         const data = dancers.map(d => ({...d, ...getScore(currentCompName, d.ID)}))
             .filter(x => x.p !== 0 || x.h !== 0 || x.n !== "")
@@ -280,15 +384,50 @@
         let html = `<h2>${type === 'points' ? 'Top Points' : 'Highest Stars'}</h2>`;
         data.forEach(d => {
             html += `
-            <div class="list-item">
+            <div class="list-item clickable" onclick="openEditModal('${d.ID}')">
                 <div><b>${d.ID} - ${d.SAFE_NAME}</b><br><small>${d.SCHOOLNAME}</small></div>
                 <div style="text-align:right">
                     <b>${d.p} pts</b><br>
-                    <span style="color:var(--star-gold)">${'★'.repeat(d.h)}</span>
+                    <span style="color:var(--star-gold)">${'★'.repeat(d.h)}${'☆'.repeat(5-d.h)}</span>
                 </div>
             </div>`;
         });
         document.getElementById(type).innerHTML = html || "<p>No entries scored yet.</p>";
+    }
+
+    function renderSchools() {
+        const comp = getComps().find(c => c.name === currentCompName);
+        if(!comp) return;
+        const dancers = getLibrary()[comp.setId] || [];
+        
+        // Group dancers by school
+        const schools = {};
+        dancers.forEach(d => {
+            if (!schools[d.SCHOOLNAME]) schools[d.SCHOOLNAME] = [];
+            schools[d.SCHOOLNAME].push(d);
+        });
+        
+        // Sort schools alphabetically
+        const sortedSchools = Object.keys(schools).sort();
+        
+        let html = `<h2>Dancers by School</h2>`;
+        sortedSchools.forEach(schoolName => {
+            const schoolDancers = schools[schoolName];
+            html += `<div style="margin-bottom: 20px;">`;
+            html += `<h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 10px;">${schoolName}</h3>`;
+            schoolDancers.forEach(d => {
+                const s = getScore(currentCompName, d.ID);
+                html += `
+                <div class="list-item clickable" onclick="openEditModal('${d.ID}')">
+                    <div><b>${d.ID} - ${d.SAFE_NAME}</b></div>
+                    <div style="text-align:right; font-size:0.9rem;">
+                        <span style="color:var(--star-gold)">${'★'.repeat(s.h)}${'☆'.repeat(5-s.h)}</span><br>${s.p} pts
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+        });
+        document.getElementById('schools').innerHTML = html;
     }
 
     // --- MODAL ---
