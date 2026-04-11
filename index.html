@@ -12,8 +12,18 @@
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; }
         
         /* Competition Manager Header */
-        .comp-manager { background: #333; color: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .comp-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+        .comp-manager { background: #333; color: white; padding: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .comp-header-top { display: flex; align-items: center; gap: 15px; padding: 15px; justify-content: space-between; }
+        .comp-title { font-size: 1.2rem; font-weight: bold; color: white; }
+        .comp-controls { display: flex; align-items: center; gap: 10px; }
+        .comp-select-group { display: flex; align-items: center; gap: 8px; }
+        .comp-select-group select { padding: 8px; border-radius: 6px; border: 1px solid #555; background: #444; color: white; font-size: 0.95rem; }
+        .comp-add-btn { background: none; border: none; color: #4CAF50; font-size: 1.8rem; cursor: pointer; padding: 0; font-weight: bold; }
+        .comp-settings-btn { background: none; border: none; color: #999; font-size: 1.3rem; cursor: pointer; padding: 8px; }
+        .comp-settings-btn:hover { color: #fff; }
+        .comp-expand-section { display: none; background: #222; padding: 15px; border-top: 1px solid #444; }
+        .comp-expand-section.open { display: block; }
+        .comp-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; justify-content: center; padding: 0; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         .input-group label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
         input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; }
@@ -56,13 +66,37 @@
         .peer-btn { background: #f0f0f0; padding: 6px 12px; border: 1px solid #ddd; border-radius: 15px; font-size: 0.85rem; cursor: pointer; color: var(--primary); font-weight: 500; touch-action: manipulation; }
         .peer-btn:active { background: #e0e0e0; }
 
+        /* Label Buttons */
+        .label-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; }
+        .label-btn { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #f5f5f5; cursor: pointer; font-size: 0.9rem; font-weight: 500; touch-action: manipulation; display: flex; gap: 4px; align-items: center; }
+        .label-btn-plus { background: #d4f1d4; color: #1b5e20; border-color: #81c784; }
+        .label-btn-minus { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+
+        /* Audit Trail */
+        .audit-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+        .audit-title { font-size: 0.7rem; font-weight: bold; color: #555; text-transform: uppercase; margin-bottom: 8px; }
+        .audit-item { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+        .audit-label { font-weight: 600; }
+        .audit-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold; padding: 0 6px; }
+
+        /* Labels Management Modal */
+        #labelsModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 3100; color: white; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .labels-container { max-width: 600px; margin: 0 auto; }
+        .label-row { background: #222; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+        .label-row input { padding: 8px; border-radius: 4px; border: 1px solid #555; background: #111; color: white; }
+        .label-row-name { flex: 1; min-width: 150px; }
+        .label-row-plus { min-width: 80px; }
+        .label-row-minus { min-width: 80px; }
+        .label-row-actions { display: flex; gap: 5px; }
+        .label-btn-remove { background: var(--danger); border: none; color: white; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
         /* List Items */
         .list-item { background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .list-item.clickable { cursor: pointer; }
 
         /* Edit Modal */
-        #editOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 2500; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box; }
-        #editInner { width: 100%; max-width: 560px; }
+        #editOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 2500; align-items: center; justify-content: center; padding: 15px; box-sizing: border-box; overflow-y: auto; }
+        #editInner { width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
         #editInner .card { margin: 0; }
 
         /* Modal */
@@ -77,21 +111,29 @@
 <body>
 
 <div class="comp-manager">
-    <div class="comp-row">
-        <div class="input-group">
-            <label>Current Comp</label>
-            <select id="compSelect" onchange="loadCompetition()"></select>
+    <div class="comp-header-top">
+        <div class="comp-title">Dancer Tracker</div>
+        <div class="comp-controls">
+            <div class="comp-select-group">
+                <select id="compSelect" onchange="loadCompetition()"></select>
+                <button class="comp-add-btn" onclick="toggleCompExpand()">+</button>
+            </div>
+            <button class="comp-settings-btn" onclick="openLabelsModal()" title="Points System">⚙️</button>
         </div>
-        <div class="input-group">
-            <label>Add New Comp</label>
-            <input type="text" id="newCompName" placeholder="Comp Name...">
+    </div>
+    <div id="compExpandSection" class="comp-expand-section">
+        <div class="comp-row">
+            <div class="input-group">
+                <label>Competition Name</label>
+                <input type="text" id="newCompName" placeholder="Enter comp name...">
+            </div>
+            <div class="input-group">
+                <label>Dancer Set</label>
+                <select id="dancerSetSelect"></select>
+            </div>
+            <button class="btn-add" onclick="createNewCompetition()">Create</button>
+            <button class="btn-add" style="background:#555" onclick="openJsonModal()">Manage Sets</button>
         </div>
-        <div class="input-group">
-            <label>Dancer Set</label>
-            <select id="dancerSetSelect"></select>
-        </div>
-        <button class="btn-add" onclick="createNewCompetition()">Create Comp</button>
-        <button class="btn-add" style="background:#555" onclick="openJsonModal()">Manage Sets</button>
     </div>
 </div>
 
@@ -143,6 +185,20 @@
     </div>
 </div>
 
+<div id="labelsModal">
+    <div class="labels-container">
+        <h2 style="color:white; margin-bottom:20px;">Points System Labels</h2>
+        <p style="color:#aaa; margin-bottom:20px;">Define custom point labels for this competition</p>
+        <div id="labelsList"></div>
+        <div style="margin-top:20px;">
+            <button class="btn-add" onclick="addLabelRow()">+ Add Label</button>
+        </div>
+        <div style="margin-top:20px;">
+            <button class="btn-add" onclick="closeLabelsModal()">Done</button>
+        </div>
+    </div>
+</div>
+
 <div id="bottomNav" class="bottom-nav">
     <button class="nav-btn" style="background:#eee" onclick="navStage(-1)">Previous</button>
     <button class="nav-btn" style="background:var(--primary); color:white" onclick="navStage(1)">Next</button>
@@ -159,6 +215,10 @@
     const getComps = () => JSON.parse(localStorage.getItem('compsList')) || [];
     const getScore = (comp, id) => JSON.parse(localStorage.getItem(`score_${comp}_${id}`)) || {h:0, p:0, n:''};
     const setScore = (comp, id, obj) => localStorage.setItem(`score_${comp}_${id}`, JSON.stringify(obj));
+    const getLabels = (comp) => JSON.parse(localStorage.getItem(`labels_${comp}`)) || [{name:'Toes',plus:1,minus:-1},{name:'Arms',plus:1,minus:-1},{name:'Theme',plus:1,minus:-1}];
+    const setLabels = (comp, labels) => localStorage.setItem(`labels_${comp}`, JSON.stringify(labels));
+    const getAudit = (comp, id) => JSON.parse(localStorage.getItem(`audit_${comp}_${id}`)) || [];
+    const setAudit = (comp, id, audit) => localStorage.setItem(`audit_${comp}_${id}`, JSON.stringify(audit));
 
     async function tryLoadDancersJson() {
         try {
@@ -237,9 +297,43 @@
     }
 
     function updateH(id, val) { let s = getScore(currentCompName, id); s.h = val; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
-    function updateP(id, val) { let s = getScore(currentCompName, id); s.p += val; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
-    function setP(id, val) { let s = getScore(currentCompName, id); s.p = parseInt(val) || 0; setScore(currentCompName, id, s); renderStage(); refreshActiveTabs(); refreshEditingCard(); }
-    function updateN(id, val) { let s = getScore(currentCompName, id); s.n = val; setScore(currentCompName, id, s); refreshActiveTabs(); refreshEditingCard(); }
+    function updateP(id, val) { 
+        let s = getScore(currentCompName, id); 
+        s.p += val; 
+        setScore(currentCompName, id, s); 
+        
+        // Add to audit trail
+        const buttonLabel = val === 1 ? '+1' : val === 5 ? '+5' : val === -1 ? '-1' : `${val > 0 ? '+' : ''}${val}`;
+        const audit = getAudit(currentCompName, id);
+        audit.push({label: `Button: ${buttonLabel}`, points: val, time: new Date().toLocaleTimeString()});
+        setAudit(currentCompName, id, audit);
+        
+        renderStage(); 
+        refreshActiveTabs(); 
+        refreshEditingCard(); 
+    }
+    function setP(id, val) { 
+        let s = getScore(currentCompName, id); 
+        const oldVal = s.p;
+        const newVal = parseInt(val) || 0;
+        const diff = newVal - oldVal;
+        
+        s.p = newVal; 
+        setScore(currentCompName, id, s); 
+        
+        // Add to audit trail if value changed
+        if (diff !== 0) {
+            const audit = getAudit(currentCompName, id);
+            const sign = diff > 0 ? '+' : '';
+            audit.push({label: `Direct: ${sign}${diff}`, points: diff, time: new Date().toLocaleTimeString()});
+            setAudit(currentCompName, id, audit);
+        }
+        
+        renderStage(); 
+        refreshActiveTabs(); 
+        refreshEditingCard(); 
+    }
+    function updateN(id, val) { let s = getScore(currentCompName, id); s.n = val; setScore(currentCompName, id, s); refreshActiveTabs(); }
 
     function skip(slot) {
         let max = Math.max(...stageIndices);
@@ -333,6 +427,20 @@
         let starHtml = '';
         for(let i=1; i<=5; i++) starHtml += `<span class="${i<=s.h?'filled':''}" onclick="updateH('${d.ID}',${i})">${i<=s.h?'★':'☆'}</span>`;
         
+        const labels = getLabels(currentCompName);
+        let labelHtml = '<div class="label-buttons">';
+        // Positive buttons on top
+        labels.forEach((label, idx) => {
+            labelHtml += `<button class="label-btn label-btn-plus" onclick="addLabelClick('${d.ID}',${idx},true)">${label.name}<br>+${label.plus}</button>`;
+        });
+        // Force new line
+        labelHtml += '<div style="flex-basis: 100%;"></div>';
+        // Negative buttons below
+        labels.forEach((label, idx) => {
+            labelHtml += `<button class="label-btn label-btn-minus" onclick="addLabelClick('${d.ID}',${idx},false)">${label.name}<br>${label.minus}</button>`;
+        });
+        labelHtml += '</div>';
+        
         return `
             <div class="card">
                 <div class="card-header">
@@ -347,12 +455,17 @@
                     <button class="pts-btn pts-btn-pos" onclick="updateP('${d.ID}',1)">+1</button>
                     <button class="pts-btn pts-btn-pos" onclick="updateP('${d.ID}',5)">+5</button>
                     <button class="pts-btn pts-btn-neg" onclick="updateP('${d.ID}',-1)">-1</button>
-                    <button class="pts-btn" onclick="updateH('${d.ID}',0);updateP('${d.ID}',-s.p);renderStage();">🗑️</button>
+                    <button class="pts-btn" onclick="updateH('${d.ID}',0);setP('${d.ID}',0);setAudit('${currentCompName}','${d.ID}',[]);renderStage();refreshActiveTabs();">🗑️</button>
                 </div>
+                ${labelHtml}
                 <textarea oninput="updateN('${d.ID}',this.value)" placeholder="Judging notes...">${s.n}</textarea>
                 <div class="peers-section">
                     <div class="peers-title">Schoolmates:</div>
                     ${getPeersHTML(d, peerMode)}
+                </div>
+                <div class="audit-section">
+                    <div class="audit-title">Audit Trail:</div>
+                    ${renderAuditTrail(d.ID)}
                 </div>
             </div>`;
     }
@@ -447,6 +560,119 @@
             initCompUI();
             closeJsonModal();
         } catch(e) { alert("Invalid JSON"); }
+    }
+
+    // --- LABELS & AUDIT ---
+    function toggleCompExpand() {
+        const section = document.getElementById('compExpandSection');
+        section.classList.toggle('open');
+    }
+
+    function openLabelsModal() {
+        if (!currentCompName) return alert("Select or create a competition first.");
+        renderLabelsList();
+        document.getElementById('labelsModal').style.display = 'block';
+    }
+
+    function closeLabelsModal() {
+        const labels = [];
+        document.querySelectorAll('[data-label-row]').forEach(row => {
+            const name = row.querySelector('.label-name-input').value.trim();
+            const plus = parseInt(row.querySelector('.label-plus-input').value) || 0;
+            const minus = parseInt(row.querySelector('.label-minus-input').value) || 0;
+            if (name) labels.push({name, plus, minus});
+        });
+        setLabels(currentCompName, labels);
+        document.getElementById('labelsModal').style.display = 'none';
+        renderStage();
+        refreshActiveTabs();
+        refreshEditingCard();
+    }
+
+    function renderLabelsList() {
+        const labels = getLabels(currentCompName);
+        let html = '';
+        labels.forEach((label, idx) => {
+            html += `<div data-label-row class="label-row">
+                <input type="text" class="label-name-input label-row-name" placeholder="Label name" value="${label.name}">
+                <input type="number" class="label-plus-input label-row-plus" placeholder="+points" value="${label.plus}">
+                <input type="number" class="label-minus-input label-row-minus" placeholder="-points" value="${label.minus}">
+                <button class="label-btn-remove" onclick="deleteLabelRow(${idx})">Remove</button>
+            </div>`;
+        });
+        document.getElementById('labelsList').innerHTML = html;
+    }
+
+    function addLabelRow() {
+        // First, save any unsaved changes from the form
+        const labels = [];
+        document.querySelectorAll('[data-label-row]').forEach(row => {
+            const name = row.querySelector('.label-name-input').value.trim();
+            const plus = parseInt(row.querySelector('.label-plus-input').value) || 0;
+            const minus = parseInt(row.querySelector('.label-minus-input').value) || 0;
+            if (name) labels.push({name, plus, minus});
+        });
+        // Add new empty label
+        labels.push({name: '', plus: 1, minus: -1});
+        setLabels(currentCompName, labels);
+        renderLabelsList();
+    }
+
+    function deleteLabelRow(idx) {
+        const labels = getLabels(currentCompName);
+        labels.splice(idx, 1);
+        setLabels(currentCompName, labels);
+        renderLabelsList();
+    }
+
+    function addLabelClick(dancerId, labelIdx, isPlus) {
+        const labels = getLabels(currentCompName);
+        const label = labels[labelIdx];
+        if (!label) return;
+        
+        const points = isPlus ? label.plus : label.minus;
+        let s = getScore(currentCompName, dancerId);
+        s.p += points;
+        setScore(currentCompName, dancerId, s);
+        
+        const audit = getAudit(currentCompName, dancerId);
+        audit.push({label: label.name, points: points, time: new Date().toLocaleTimeString()});
+        setAudit(currentCompName, dancerId, audit);
+        
+        renderStage();
+        refreshActiveTabs();
+        refreshEditingCard();
+    }
+
+    function removeAuditEntry(dancerId, auditIdx) {
+        const audit = getAudit(currentCompName, dancerId);
+        if (auditIdx < 0 || auditIdx >= audit.length) return;
+        const removed = audit[auditIdx];
+        audit.splice(auditIdx, 1);
+        setAudit(currentCompName, dancerId, audit);
+        
+        let s = getScore(currentCompName, dancerId);
+        s.p -= removed.points;
+        setScore(currentCompName, dancerId, s);
+        
+        renderStage();
+        refreshActiveTabs();
+        refreshEditingCard();
+    }
+
+    function renderAuditTrail(dancerId) {
+        const audit = getAudit(currentCompName, dancerId);
+        if (audit.length === 0) return '<div style="font-size:0.8rem; color:#999;">No audit entries yet.</div>';
+        
+        let html = '<div class="audit-item" style="background:#eee; font-weight:bold; margin-bottom:8px;"><div>From Labels</div><div>Remove</div></div>';
+        audit.forEach((entry, idx) => {
+            const sign = entry.points > 0 ? '+' : '';
+            html += `<div class="audit-item">
+                <div><span class="audit-label">${entry.label}</span> ${sign}${entry.points} pts</div>
+                <button class="audit-remove" onclick="removeAuditEntry('${dancerId}',${idx})">✕</button>
+            </div>`;
+        });
+        return html;
     }
 
     // --- INIT ---
