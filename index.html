@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Judge Master Pro 2026</title>
+    <style>
+        :root { 
+            --primary: #2e7d32; --secondary: #fb8c00; --danger: #d32f2f; 
+            --bg: #f0f2f5; --star-gold: #ffc107; --star-empty: #bdc3c7; 
+        }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding-bottom: 120px; }
+        
+        /* Competition Manager Header */
+        .comp-manager { background: #333; color: white; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .comp-row { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; justify-content: center; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; }
+        
+        /* Tabs */
+        .tab-bar { display: flex; background: #fff; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab { flex: 1; text-align: center; padding: 15px; font-weight: bold; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+        .content-section { display: none; padding: 15px; max-width: 1200px; margin: 0 auto; }
+        .content-section.active { display: block; }
+
+        /* Stage Config Area */
+        .stage-controls { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+
+        /* Grid & Cards */
+        .grid { display: grid; gap: 15px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .card { background: #fff; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 6px solid var(--primary); position: relative; }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .id-badge { font-size: 1.8rem; font-weight: 900; color: #222; }
+        .skip-btn { color: var(--danger); font-size: 1.5rem; background: none; border: none; cursor: pointer; font-weight: bold; }
+
+        .star-row { font-size: 2.2rem; cursor: pointer; color: var(--star-empty); margin: 10px 0; user-select: none; }
+        .star-row .filled { color: var(--star-gold); }
+        
+        .pts-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+        .pts-val { font-size: 1.8rem; font-weight: bold; width: 50px; text-align: center; }
+        .pts-btn { flex: 1; padding: 10px 0; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; background: #eee; }
+
+        textarea { width: 100%; min-height: 90px; border-radius: 8px; border: 1px solid #ddd; padding: 10px; box-sizing: border-box; font-size: 1rem; }
+
+        /* List Items */
+        .list-item { background: #fff; margin-bottom: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        /* Modal */
+        #jsonModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 3000; color: white; padding: 20px; box-sizing: border-box; }
+        #jsonModal textarea { width: 100%; height: 60%; background: #111; color: #0f0; font-family: monospace; border: 1px solid #444; }
+
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #fff; padding: 15px 0; display: flex; justify-content: center; gap: 20px; border-top: 1px solid #ddd; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-btn { padding: 15px 30px; border-radius: 30px; border: none; font-weight: bold; cursor: pointer; min-width: 140px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+<div class="comp-manager">
+    <div class="comp-row">
+        <div class="input-group">
+            <label>Current Comp</label>
+            <select id="compSelect" onchange="loadCompetition()"></select>
+        </div>
+        <div class="input-group">
+            <label>Add New Comp</label>
+            <input type="text" id="newCompName" placeholder="Comp Name...">
+        </div>
+        <div class="input-group">
+            <label>Dancer Set</label>
+            <select id="dancerSetSelect"></select>
+        </div>
+        <button class="btn-add" onclick="createNewCompetition()">Create Comp</button>
+        <button class="btn-add" style="background:#555" onclick="openJsonModal()">Manage Sets</button>
+    </div>
+</div>
+
+<div class="tab-bar">
+    <div class="tab active" onclick="switchTab('stage')">STAGE</div>
+    <div class="tab" onclick="switchTab('points')">BY POINTS</div>
+    <div class="tab" onclick="switchTab('stars')">BY STARS</div>
+</div>
+
+<section id="stage" class="content-section active">
+    <div class="stage-controls">
+        <div class="input-group">
+            <label>Jump To ID</label>
+            <select id="startDancerSelect" onchange="jumpToDancer()"></select>
+        </div>
+        <div class="input-group">
+            <label>Dancers On Stage</label>
+            <select id="stageSize" onchange="renderStage()">
+                <option value="1">1 Dancer</option>
+                <option value="2" selected>2 Dancers</option>
+                <option value="3">3 Dancers</option>
+                <option value="4">4 Dancers</option>
+            </select>
+        </div>
+    </div>
+    <div id="stageDisplay" class="grid"></div>
+</section>
+
+<section id="points" class="content-section"></section>
+<section id="stars" class="content-section"></section>
+
+<div id="jsonModal">
+    <h2>Dancer Set Manager</h2>
+    <p>Paste your JSON here. Must be an array of objects.</p>
+    <div class="input-group" style="margin-bottom:10px">
+        <label>Set Name</label>
+        <input type="text" id="setName" style="width:300px">
+    </div>
+    <textarea id="jsonInput" placeholder='[{"ID":"T101","SAFE_NAME":"John S"...}]'></textarea>
+    <div style="margin-top:15px">
+        <button class="btn-add" onclick="saveDancerSet()">Import Set</button>
+        <button class="btn-add" style="background:var(--danger)" onclick="closeJsonModal()">Cancel</button>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <button class="nav-btn" style="background:#eee" onclick="navStage(-1)">Previous Pair</button>
+    <button class="nav-btn" style="background:var(--primary); color:white" onclick="navStage(1)">Next Pair</button>
+</div>
+
+<script>
+    // Initial State
+    let currentCompName = "";
+    let stageIndices = [0, 1];
+
+    // --- DATA FETCHING & STORAGE ---
+    const getLibrary = () => JSON.parse(localStorage.getItem('dancerLibrary')) || {};
+    const getComps = () => JSON.parse(localStorage.getItem('compsList')) || [];
+    const getScore = (comp, id) => JSON.parse(localStorage.getItem(`score_${comp}_${id}`)) || {h:0, p:0, n:''};
+    const setScore = (comp, id, obj) => localStorage.setItem(`score_${comp}_${id}`, JSON.stringify(obj));
+
+    async function tryLoadDancersJson() {
+        try {
+            const res = await fetch('dancers.json');
+            if (res.ok) {
+                const data = await res.json();
+                let lib = getLibrary();
+                data.forEach(item => lib[item.setName] = item.dancerSet);
+                localStorage.setItem('dancerLibrary', JSON.stringify(lib));
+                initCompUI();
+            }
+        } catch (e) { console.log("dancers.json not found locally."); }
+    }
+
+    // --- COMPETITION LOGIC ---
+    function createNewCompetition() {
+        const name = document.getElementById('newCompName').value.trim();
+        const set = document.getElementById('dancerSetSelect').value;
+        if(!name || !set) return alert("Enter name and select a dancer set.");
+        let comps = getComps();
+        if(comps.find(c => c.name === name)) return alert("Comp name exists.");
+        comps.push({ name, setId: set });
+        localStorage.setItem('compsList', JSON.stringify(comps));
+        currentCompName = name;
+        document.getElementById('newCompName').value = "";
+        initCompUI();
+        loadCompetition();
+    }
+
+    function initCompUI() {
+        const sel = document.getElementById('compSelect');
+        const comps = getComps();
+        sel.innerHTML = comps.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        if(comps.length > 0 && !currentCompName) currentCompName = comps[0].name;
+        sel.value = currentCompName;
+
+        const setSel = document.getElementById('dancerSetSelect');
+        const lib = getLibrary();
+        setSel.innerHTML = Object.keys(lib).map(k => `<option value="${k}">${k}</option>`).join('');
+    }
+
+    function loadCompetition() {
+        currentCompName = document.getElementById('compSelect').value;
+        const comps = getComps();
+        const compObj = comps.find(c => c.name === currentCompName);
+        if(!compObj) return;
+        
+        const dancers = getLibrary()[compObj.setId] || [];
+        const startSel = document.getElementById('startDancerSelect');
+        startSel.innerHTML = dancers.map((d,i) => `<option value="${i}">${d.ID} - ${d.SAFE_NAME}</option>`).join('');
+        
+        stageIndices = [0, 1];
+        renderStage();
+    }
+
+    // --- UI ACTIONS ---
+    function updateH(id, val) { let s = getScore(currentCompName, id); s.h = val; setScore(currentCompName, id, s); renderStage(); }
+    function updateP(id, val) { let s = getScore(currentCompName, id); s.p += val; setScore(currentCompName, id, s); renderStage(); }
+    function updateN(id, val) { let s = getScore(currentCompName, id); s.n = val; setScore(currentCompName, id, s); }
+
+    function skip(slot) {
+        let max = Math.max(...stageIndices);
+        stageIndices[slot] = max + 1;
+        renderStage();
+    }
+
+    function navStage(dir) {
+        const size = parseInt(document.getElementById('stageSize').value);
+        stageIndices = stageIndices.map(i => i + (size * dir));
+        renderStage();
+    }
+
+    function jumpToDancer() {
+        const start = parseInt(document.getElementById('startDancerSelect').value);
+        const size = parseInt(document.getElementById('stageSize').value);
+        stageIndices = [];
+        for(let i=0; i<size; i++) stageIndices.push(start + i);
+        renderStage();
+    }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab, .content-section').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.tab[onclick*='${t}']`).classList.add('active');
+        document.getElementById(t).classList.add('active');
+        if(t === 'points') renderRanking('points');
+        if(t === 'stars') renderRanking('stars');
+    }
+
+    // --- RENDERERS ---
+    function renderCard(d, slot) {
+        if(!d) return `<div class="card"><h3>End of List</h3></div>`;
+        const s = getScore(currentCompName, d.ID);
+        let starHtml = '';
+        for(let i=1; i<=5; i++) starHtml += `<span class="${i<=s.h?'filled':''}" onclick="updateH('${d.ID}',${i})">${i<=s.h?'★':'☆'}</span>`;
+        
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <span class="id-badge">${d.ID}</span>
+                    <button class="skip-btn" onclick="skip(${slot})">✕</button>
+                </div>
+                <div style="font-weight:bold">${d.SAFE_NAME}</div>
+                <div style="font-size:0.8rem; color:#666">${d.SCHOOLNAME}</div>
+                <div class="star-row">${starHtml}</div>
+                <div class="pts-row">
+                    <div class="pts-val">${s.p}</div>
+                    <button class="pts-btn" onclick="updateP('${d.ID}',1)">+1</button>
+                    <button class="pts-btn" onclick="updateP('${d.ID}',5)">+5</button>
+                    <button class="pts-btn" onclick="updateP('${d.ID}',-1)">-1</button>
+                    <button class="pts-btn" onclick="updateH('${d.ID}',0);updateP('${d.ID}',-s.p);renderStage();">🗑️</button>
+                </div>
+                <textarea oninput="updateN('${d.ID}',this.value)" placeholder="Judging notes...">${s.n}</textarea>
+            </div>`;
+    }
+
+    function renderStage() {
+        const comp = getComps().find(c => c.name === currentCompName);
+        if(!comp) return;
+        const dancers = getLibrary()[comp.setId] || [];
+        const size = parseInt(document.getElementById('stageSize').value);
+        
+        // Ensure indices array matches desired stage size
+        if(stageIndices.length !== size) {
+            let start = stageIndices[0] || 0;
+            stageIndices = Array.from({length: size}, (_, i) => start + i);
+        }
+
+        document.getElementById('stageDisplay').innerHTML = stageIndices
+            .map((idx, slot) => renderCard(dancers[idx], slot)).join('');
+        
+        document.getElementById('startDancerSelect').value = stageIndices[0];
+    }
+
+    function renderRanking(type) {
+        const comp = getComps().find(c => c.name === currentCompName);
+        const dancers = getLibrary()[comp.setId] || [];
+        const data = dancers.map(d => ({...d, ...getScore(currentCompName, d.ID)}))
+            .filter(x => x.p !== 0 || x.h !== 0 || x.n !== "")
+            .sort((a,b) => type === 'points' ? b.p - a.p : (b.h - a.h || b.p - a.p));
+
+        let html = `<h2>${type === 'points' ? 'Top Points' : 'Highest Stars'}</h2>`;
+        data.forEach(d => {
+            html += `
+            <div class="list-item">
+                <div><b>${d.ID} - ${d.SAFE_NAME}</b><br><small>${d.SCHOOLNAME}</small></div>
+                <div style="text-align:right">
+                    <b>${d.p} pts</b><br>
+                    <span style="color:var(--star-gold)">${'★'.repeat(d.h)}</span>
+                </div>
+            </div>`;
+        });
+        document.getElementById(type).innerHTML = html || "<p>No entries scored yet.</p>";
+    }
+
+    // --- MODAL ---
+    function openJsonModal() { document.getElementById('jsonModal').style.display = 'block'; }
+    function closeJsonModal() { document.getElementById('jsonModal').style.display = 'none'; }
+    function saveDancerSet() {
+        const name = document.getElementById('setName').value.trim();
+        const raw = document.getElementById('jsonInput').value;
+        if(!name || !raw) return;
+        try {
+            const parsed = JSON.parse(raw);
+            let lib = getLibrary();
+            lib[name] = parsed;
+            localStorage.setItem('dancerLibrary', JSON.stringify(lib));
+            initCompUI();
+            closeJsonModal();
+        } catch(e) { alert("Invalid JSON"); }
+    }
+
+    // --- INIT ---
+    window.onload = async () => {
+        await tryLoadDancersJson();
+        initCompUI();
+        if(getComps().length > 0) loadCompetition();
+    };
+</script>
+
+</body>
+</html>
